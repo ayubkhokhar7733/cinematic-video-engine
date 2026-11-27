@@ -5,6 +5,7 @@ and multilingual RTL shaping.
 """
 
 import json
+import textwrap
 from pathlib import Path
 
 PALETTES = {
@@ -114,6 +115,10 @@ def build_film(doc):
         rot_deg = -2.0 if line_id % 2 == 1 else 1.8
         photo_key = line.get("photo", DEFAULT_PHOTOS[i % len(DEFAULT_PHOTOS)])
 
+        wrap_w = 34 if not is_vertical else 32
+        wrapped = [w.replace('"', '') for w in textwrap.wrap(spoken, width=wrap_w)[:4]]
+        lines_repr = json.dumps(wrapped, ensure_ascii=False)
+
         if not is_vertical:
             # 16:9 Landscape Layout: Cartoon Print on left, Card on right
             code += f'''
@@ -121,9 +126,9 @@ def build_film(doc):
     film.add(Print("{photo_key}", {x_pos - 1250}, 200, {photo_w}, rot={-rot_deg}, t_in=L({line_id}), border=0.04, pin=True))
     film.add(Card({x_pos + 1250}, 200, {card_w}, {card_h}, L({line_id}) + 0.15,
                   title="{card_title}",
-                  lines=["{spoken[:55].replace('"', '')}", "{spoken[55:110].replace('"', '')}"],
+                  lines={lines_repr},
                   rgb=CARD_BG, text_rgb=TEXT_COLOR, accent={accent_col},
-                  rot={rot_deg}, title_size=230, body_size=135))
+                  rot={rot_deg}, title_size=195, body_size=108))
 '''
         else:
             # 9:16 Vertical Layout: Cartoon Print on top, Card below
@@ -132,17 +137,17 @@ def build_film(doc):
     film.add(Print("{photo_key}", {x_pos}, -700, {photo_w}, rot={-rot_deg}, t_in=L({line_id}), border=0.04, pin=True))
     film.add(Card({x_pos}, 1100, {card_w}, {card_h}, L({line_id}) + 0.15,
                   title="{card_title}",
-                  lines=["{spoken[:55].replace('"', '')}", "{spoken[55:110].replace('"', '')}"],
+                  lines={lines_repr},
                   rgb=CARD_BG, text_rgb=TEXT_COLOR, accent={accent_col},
-                  rot={rot_deg}, title_size=210, body_size=125))
+                  rot={rot_deg}, title_size=185, body_size=102))
 '''
 
-        # Stamp if specified
+        # Stamp if specified (placed cleanly in bottom-right of card, never overlapping title)
         if line.get("stamp"):
             stamp_rot = -8.0 if line_id % 2 == 1 else 7.5
-            stamp_x = x_pos + 2150 if not is_vertical else x_pos + 850
-            stamp_y = -500 if not is_vertical else 400
-            code += f'    film.add(Stamp("{line["stamp"]}", {stamp_x}, {stamp_y}, size=150, rot={stamp_rot}, t_in=L({line_id}) + 0.9, rgb=STAMP_COLOR))\n'
+            stamp_x = x_pos + 1900 if not is_vertical else x_pos + 800
+            stamp_y = 780 if not is_vertical else 1650
+            code += f'    film.add(Stamp("{line["stamp"]}", {stamp_x}, {stamp_y}, size=140, rot={stamp_rot}, t_in=L({line_id}) + 0.9, rgb=STAMP_COLOR))\n'
 
         # Route connection between stations
         if i > 0:
@@ -152,14 +157,12 @@ def build_film(doc):
             to_pt = f"({x_pos} - 2350, 200)" if not is_vertical else f"({x_pos}, -1400)"
             code += f'    film.add(Route({from_pt}, {to_pt}, t_in=L({line_id}) - 0.2, dur=0.6, bend={bend}, width=28, rgb={accent_col}))\n'
 
-    # Camera Choreography framing both cartoon illustration and card
+    # Camera Choreography — strictly chronological, smooth glide from title to each beat
     zoom = 0.50 if not is_vertical else 0.42
     code += f'''
-    # Camera Choreography — title-only opener, then glide into the board
+    # Camera Choreography
     film.shot(0.0, {mid_x}, -4000, {zoom * 0.72:.2f})    # tight title frame
     film.shot(0.6, {mid_x}, -4000, {zoom * 0.68:.2f})    # subtle push-in
-    film.shot(E(1) - 0.3, {mid_x}, -400, {zoom * 0.60:.2f})  # glide down to cards
-    film.shot(E(1) + 0.2, {mid_x}, 150, {zoom * 0.56:.2f})   # settle on board
 '''
 
     for i, line in enumerate(all_lines):
