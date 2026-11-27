@@ -109,10 +109,15 @@ def main():
     # 6. Build narration & global timing
     run_cmd([python_exe, str(ENGINE_DIR / "build_narration.py"), "--project", str(proj)], desc="Assemble Narration")
 
+    # 6.5 Extract SFX cues & mix narration + SFX + ambient bed
+    run_cmd([python_exe, str(ENGINE_DIR / "render.py"), "--project", str(proj), "--cues"], desc="Extract SFX Cues")
+    run_cmd([python_exe, str(ENGINE_DIR / "build_sfx.py"), "--project", str(proj)], desc="Mix SFX & Ambient Bed")
+
     # 7. Render Video with Skia
     render_size = RESOLUTIONS[args.aspect_ratio][args.resolution]
     out_mp4 = proj / "out" / "final.mp4"
-    audio_track = proj / "audio" / "narration.m4a"
+    mix_track = proj / "audio" / "mix.m4a"
+    audio_track = mix_track if mix_track.exists() else (proj / "audio" / "narration.m4a")
 
     run_cmd([
         python_exe, str(ENGINE_DIR / "render.py"),

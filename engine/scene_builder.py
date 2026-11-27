@@ -149,6 +149,11 @@ def build_film(doc):
             stamp_y = 780 if not is_vertical else 1650
             code += f'    film.add(Stamp("{line["stamp"]}", {stamp_x}, {stamp_y}, size=140, rot={stamp_rot}, t_in=L({line_id}) + 0.9, rgb=STAMP_COLOR))\n'
 
+        # Hand-drawn accent underline beneath card title for visual engagement
+        ul_x = (x_pos + 1250) if not is_vertical else x_pos
+        ul_y = -210 if not is_vertical else 710
+        code += f'    film.add(PenMark("underline", {ul_x}, {ul_y}, 1500, 36, t_in=L({line_id}) + 0.55, dur=0.45, width=18, rgb={accent_col}))\n'
+
         # Route connection between stations
         if i > 0:
             prev_x = xs[i - 1]
