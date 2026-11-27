@@ -78,12 +78,16 @@ def generate_topic_images(config: dict, proj_dir: pathlib.Path) -> dict:
     photos_dir.mkdir(parents=True, exist_ok=True)
     photos_json_path = proj_dir / "photos.json"
 
-    photos_meta = {}
+    photos_meta = {"grade": "natural", "photos": []}
     if photos_json_path.exists():
         try:
-            photos_meta = json.loads(photos_json_path.read_text(encoding="utf-8"))
+            loaded = json.loads(photos_json_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict) and "photos" in loaded:
+                photos_meta = loaded
         except Exception:
-            photos_meta = {}
+            pass
+
+    existing_ids = {p.get("id") for p in photos_meta.get("photos", [])}
 
     for take in config.get("takes", []):
         for idx, line in enumerate(take.get("lines", [])):
@@ -103,7 +107,9 @@ def generate_topic_images(config: dict, proj_dir: pathlib.Path) -> dict:
             ok = generate_image_cloudflare(prompt, out_file) or generate_image_pollinations(prompt, out_file)
             if ok:
                 line["photo"] = photo_key
-                photos_meta[photo_key] = {"kind": "color", "grade": "natural"}
+                if photo_key not in existing_ids:
+                    photos_meta["photos"].append({"id": photo_key, "file": f"{photo_key}.jpg", "kind": "color"})
+                    existing_ids.add(photo_key)
                 print(f"  ✅ Saved {out_file.name}", flush=True)
             else:
                 print(f"  ⚠️ Using fallback photo for Beat #{line_id}", flush=True)
