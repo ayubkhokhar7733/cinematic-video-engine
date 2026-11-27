@@ -324,7 +324,8 @@ def draw_text(c, res, text, x, y, size, font="serif", rgb=CREAM, a=1.0, track=0.
 
 
 def text_width(res, text, size, font="serif", track=0.0):
-    if any('\u0600' <= ch <= '\u06ff' or '\ufb50' <= ch <= '\ufeff' for ch in text):
+    is_arabic = any('\u0600' <= ch <= '\u06ff' or '\ufb50' <= ch <= '\ufeff' for ch in text)
+    if is_arabic:
         try:
             import arabic_reshaper
             from bidi.algorithm import get_display
