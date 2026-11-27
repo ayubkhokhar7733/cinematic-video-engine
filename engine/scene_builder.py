@@ -1,6 +1,6 @@
 """
 scene_builder.py — Generates scene.py dynamically from JSON config for 16:9 and 9:16 aspect ratios.
-Supports all 7 visual looks and multilingual RTL shaping.
+Supports all 7 visual looks, tactile documentary pinboard animations, and multilingual RTL shaping.
 """
 
 import json
@@ -16,7 +16,7 @@ PALETTES = {
     },
     "slate": {
         "accent": (70, 170, 220),      # Bright cyan
-        "secondary": (210, 180, 80),
+        "secondary": (210, 180, 80),   # Warm amber gold
         "card_bg": (15, 20, 26),
         "text": (230, 235, 240),
         "stamp": (210, 50, 45)
@@ -30,10 +30,10 @@ PALETTES = {
     },
     "paper": {
         "accent": (160, 50, 40),       # Terracotta
-        "secondary": (40, 100, 140),
-        "card_bg": (250, 248, 242),
-        "text": (34, 32, 30),
-        "stamp": (180, 30, 30)
+        "secondary": (40, 100, 140),   # Prussian blue
+        "card_bg": (250, 248, 242),    # Warm archival parchment
+        "text": (34, 32, 30),          # Charcoal ink
+        "stamp": (180, 30, 30)         # Red wax/rubber stamp
     },
     "studio": {
         "accent": (198, 92, 46),       # Clean orange
@@ -44,14 +44,14 @@ PALETTES = {
     },
     "blueprint": {
         "accent": (100, 220, 255),     # Electric blue
-        "secondary": (255, 215, 0),
+        "secondary": (255, 215, 0),    # Cadmium gold
         "card_bg": (16, 40, 80),
         "text": (230, 245, 255),
         "stamp": (255, 90, 70)
     },
     "night": {
-        "accent": (130, 90, 255),      # Neon purple/blue
-        "secondary": (0, 240, 255),
+        "accent": (130, 90, 255),      # Neon purple
+        "secondary": (0, 240, 255),    # Cyber cyan
         "card_bg": (12, 16, 28),
         "text": (240, 245, 255),
         "stamp": (255, 60, 80)
@@ -81,7 +81,7 @@ def generate_scene_code(config: dict, aspect_ratio: str = "16:9") -> str:
     card_h = 2000 if not is_vertical else 3000
 
     code = f'''"""Auto-generated scene.py for {title} ({aspect_ratio}, look={look})"""
-from engine import Film, BigText, Card, Counter, PenMark, Route, Stamp
+from engine import Film, BigText, Card, Counter, PenMark, Route, Stamp, MapPin
 
 LOOK = "{look}"
 ACCENT = {colors["accent"]}
@@ -99,34 +99,37 @@ def build_film(doc):
     film.add(PenMark("underline", {mid_x}, -2100, 5000, 60, t_in=L(1) + 0.4, dur=0.6, width=32, rgb=SECONDARY))
 '''
 
-    # Generate Cards, Counters, Stamps
+    # Generate Cards, Pins, Counters, Stamps
     for i, line in enumerate(all_lines):
         line_id = line.get("id", i + 1)
         card_title = line.get("typed", line.get("hero", f"Scene {line_id}"))
         spoken = line.get("spoken", line.get("text", ""))
         x_pos = xs[i] if i < len(xs) else i * gap
         accent_col = "ACCENT" if i % 2 == 0 else "SECONDARY"
+        rot_deg = -2.0 if line_id % 2 == 1 else 1.8
 
         code += f'''
-    # Line {line_id}
+    # Line {line_id} - Card & Pin
     film.add(Card({x_pos}, 200, {card_w}, {card_h}, L({line_id}) + 0.1,
                   title="{card_title}",
                   lines=["{spoken[:55].replace('"', '')}", "{spoken[55:110].replace('"', '')}"],
                   rgb=CARD_BG, text_rgb=TEXT_COLOR, accent={accent_col},
-                  title_size=260, body_size=150))
+                  rot={rot_deg}, title_size=260, body_size=150))
+    film.add(MapPin({x_pos}, {int(200 - card_h / 2 + 100)}, t_in=L({line_id}) + 0.35, size=1.2))
 '''
 
-        # Stamp if specified or every other card
+        # Stamp if specified
         if line.get("stamp"):
-            code += f'    film.add(Stamp("{line["stamp"]}", {x_pos} + 1000, -500, size=140, rot=-8.0, t_in=L({line_id}) + 1.2, rgb=STAMP_COLOR))\n'
+            stamp_rot = -8.0 if line_id % 2 == 1 else 7.5
+            code += f'    film.add(Stamp("{line["stamp"]}", {x_pos} + 950, -450, size=150, rot={stamp_rot}, t_in=L({line_id}) + 0.9, rgb=STAMP_COLOR))\n'
 
         # Route connection between cards
         if i > 0:
             prev_x = xs[i - 1]
             bend = -0.25 if i % 2 == 1 else 0.25
-            code += f'    film.add(Route(({prev_x} + {card_w} / 2 + 80, 200), ({x_pos} - {card_w} / 2 - 80, 200), t_in=L({line_id}) - 0.2, dur=0.6, bend={bend}, width=26, rgb={accent_col}))\n'
+            code += f'    film.add(Route(({prev_x} + {card_w} / 2 + 80, 200), ({x_pos} - {card_w} / 2 - 80, 200), t_in=L({line_id}) - 0.2, dur=0.6, bend={bend}, width=28, rgb={accent_col}))\n'
 
-    # Camera shots
+    # Camera Choreography with Dynamic Panning & Subtle Rotation
     zoom = 0.55 if not is_vertical else 0.45
     code += f'''
     # Camera Choreography
@@ -137,15 +140,15 @@ def build_film(doc):
     for i, line in enumerate(all_lines):
         line_id = line.get("id", i + 1)
         x_pos = xs[i] if i < len(xs) else i * gap
-        rot = -0.4 if line_id % 2 == 0 else 0.4
-        code += f'''    film.shot(L({line_id}) + 0.4, {x_pos}, 450, {zoom:.2f}, rot={rot})
-    film.shot(E({line_id}) - 0.1, {x_pos} + 150, 550, {zoom * 0.95:.2f})
+        cam_rot = -0.35 if line_id % 2 == 0 else 0.35
+        code += f'''    film.shot(L({line_id}) + 0.3, {x_pos}, 400, {zoom:.2f}, rot={cam_rot})
+    film.shot(E({line_id}) - 0.1, {x_pos} + 120, 480, {zoom * 0.95:.2f})
 '''
 
     # Final Wide Pull-Back
     code += f'''
     # Final Wide Pull-Back
-    film.shot(doc.duration - 2.5, {mid_x}, 300, {zoom * 0.45:.2f})
+    film.shot(doc.duration - 2.5, {mid_x}, 250, {zoom * 0.45:.2f})
     film.shot(film.duration, {mid_x}, 150, {zoom * 0.35:.2f}, radius=20000, strength=0.1)
 
     return film
