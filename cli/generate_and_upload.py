@@ -116,9 +116,8 @@ def main():
     # 8. Upload to YouTube if requested
     if args.upload_youtube:
         print("\n🚀 Uploading video directly to YouTube...")
-        from youtube_uploader import get_youtube_client, upload_video
+        from youtube_uploader import upload_video
 
-        client = get_youtube_client()
         title = config.get("title", "Cinematic Video")
         if args.aspect_ratio == "9:16":
             title += " #Shorts"
@@ -127,13 +126,12 @@ def main():
         tags = config.get("tags", ["documentary", "history", "cinematic", "shorts"])
 
         upload_res = upload_video(
-            youtube=client,
             video_path=str(out_mp4),
             title=title,
             description=description,
             tags=tags,
             privacy_status=args.privacy,
-            category_name="education" if "history" in title.lower() or "قدیم" in title else "entertainment"
+            category="Education" if "history" in title.lower() or "قدیم" in title else "Entertainment"
         )
 
         video_id = upload_res.get("id")
