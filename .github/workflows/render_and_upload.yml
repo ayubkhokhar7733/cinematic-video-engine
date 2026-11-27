@@ -1,0 +1,198 @@
+name: Cinematic Render & Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: 'Video Title'
+        required: true
+        default: 'قدیم ملتان: اولیاء کا تاریخی شہر'
+      script_payload:
+        description: 'JSON Script Config (Takes and Lines)'
+        required: false
+        default: ''
+      look:
+        description: 'Cinematic Visual Look'
+        required: true
+        default: 'wall'
+        type: choice
+        options:
+          - wall
+          - slate
+          - charcoal
+          - paper
+          - studio
+          - blueprint
+          - night
+      voice:
+        description: 'TTS Voice Model'
+        required: true
+        default: 'ur-PK-AsadNeural'
+        type: choice
+        options:
+          - ur-PK-AsadNeural
+          - ur-PK-UzmaNeural
+          - ur-IN-SalmanNeural
+          - en-US-ChristopherNeural
+          - en-US-JennyNeural
+          - en-US-GuyNeural
+      aspect_ratio:
+        description: 'Aspect Ratio'
+        required: true
+        default: '16:9'
+        type: choice
+        options:
+          - '16:9'
+          - '9:16'
+      resolution:
+        description: 'Resolution'
+        required: true
+        default: '720p'
+        type: choice
+        options:
+          - 720p
+          - 1080p
+      upload_youtube:
+        description: 'Upload directly to YouTube'
+        required: true
+        type: boolean
+        default: true
+      privacy:
+        description: 'YouTube Privacy Status'
+        required: true
+        default: 'unlisted'
+        type: choice
+        options:
+          - unlisted
+          - private
+          - public
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  render_and_publish:
+    name: Render Video on GitHub Cloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up System FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libavcodec-extra fonts-noto-core
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prepare Script Payload
+        id: prepare
+        run: |
+          if [ -z "${{ inputs.script_payload }}" ]; then
+            cat << 'EOF' > payload.json
+          {
+            "title": "${{ inputs.title }}",
+            "look": "${{ inputs.look }}",
+            "takes": [
+              {
+                "take": "T01_open",
+                "lines": [
+                  {
+                    "id": 1,
+                    "text": "${{ inputs.title }}",
+                    "spoken": "${{ inputs.title }}",
+                    "typed": "${{ inputs.title }}",
+                    "gap_after": 0.8
+                  }
+                ]
+              },
+              {
+                "take": "T02_body",
+                "lines": [
+                  {
+                    "id": 2,
+                    "text": "پانچ ہزار سال پرانی عظیم تاریخ کا گواہ ہے۔",
+                    "spoken": "پانچ ہزار سال پرانی عظیم تاریخ کا گواہ ہے۔",
+                    "typed": "قدیم تاریخ",
+                    "stamp": "تاریخی ورثہ"
+                  },
+                  {
+                    "id": 3,
+                    "text": "سکندرِ اعظم نے اس تاریخی قلعے کا محاصرہ کیا۔",
+                    "spoken": "سکندرِ اعظم نے اس تاریخی قلعے کا محاصرہ کیا۔",
+                    "typed": "سکندر اعظم",
+                    "stamp": "۳۲۶ ق م"
+                  }
+                ]
+              },
+              {
+                "take": "T03_close",
+                "lines": [
+                  {
+                    "id": 4,
+                    "text": "یہ وہ تاریخی دھرتی ہے جہاں صدیاں سانس لیتی ہیں۔",
+                    "spoken": "یہ وہ تاریخی دھرتی ہے جہاں صدیاں سانس لیتی ہیں۔",
+                    "typed": "زندہ تاریخ"
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          else
+            echo '${{ inputs.script_payload }}' > payload.json
+          fi
+
+      - name: Execute Cinematic Generation & Upload
+        id: render
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          UPLOAD_FLAG=""
+          if [ "${{ inputs.upload_youtube }}" = "true" ] && [ -n "${{ secrets.YOUTUBE_REFRESH_TOKEN }}" ]; then
+            UPLOAD_FLAG="--upload-youtube"
+          fi
+
+          python cli/generate_and_upload.py \
+            --config payload.json \
+            --project-dir run_output \
+            --voice "${{ inputs.voice }}" \
+            --aspect-ratio "${{ inputs.aspect_ratio }}" \
+            --resolution "${{ inputs.resolution }}" \
+            --privacy "${{ inputs.privacy }}" \
+            $UPLOAD_FLAG
+
+      - name: Check YouTube Upload Status
+        id: status_check
+        run: |
+          if [ -f "run_output/out/upload_result.json" ]; then
+            YT_URL=$(jq -r '.youtube_url' run_output/out/upload_result.json)
+            echo "yt_url=$YT_URL" >> $GITHUB_OUTPUT
+            echo "### 🎬 YouTube Upload Completed!" >> $GITHUB_STEP_SUMMARY
+            echo "Watch online: [$YT_URL]($YT_URL)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "yt_url=" >> $GITHUB_OUTPUT
+            echo "### ⚠️ Render Finished (YouTube Upload Skipped or Pending Secrets)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Temporary Video Artifact (1-Day Retention)
+        if: steps.status_check.outputs.yt_url == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinematic-video-${{ github.run_id }}
+          path: run_output/out/final.mp4
+          retention-days: 1

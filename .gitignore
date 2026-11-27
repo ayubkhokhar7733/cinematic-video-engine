@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.env.local
+
+# Builds and outputs
+run_output/
+local_build/
+build_project/
+out/
+temp/
+*.mp4
+*.m4a
+*.wav
+*.mp3
+
+# Next.js & Node
+node_modules/
+.next/
+dist/
+.vercel
