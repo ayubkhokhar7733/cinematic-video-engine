@@ -147,9 +147,13 @@ def main():
     jobs = [(str(proj), a.size, bounds[i], bounds[i + 1], work / f"c{i:03d}.mp4", a.crf) for i in range(k)]
     print(f"rendering {n} frames ({n / fps:.1f}s) at {a.size} on {k} workers")
     t0 = time.time()
-    with mp.get_context("spawn").Pool(k) as pool:
-        for b0, b1, dt in pool.imap_unordered(worker, jobs):
-            print(f"  frames {b0}-{b1}: {dt:.0f}s ({(b1 - b0) / dt:.1f} fps/worker)", flush=True)
+    if k == 1:
+        b0, b1, dt = worker(jobs[0])
+        print(f"  frames {b0}-{b1}: {dt:.0f}s ({(b1 - b0) / dt:.1f} fps)", flush=True)
+    else:
+        with mp.get_context("spawn").Pool(k) as pool:
+            for b0, b1, dt in pool.imap_unordered(worker, jobs):
+                print(f"  frames {b0}-{b1}: {dt:.0f}s ({(b1 - b0) / dt:.1f} fps/worker)", flush=True)
     lst = work / "list.txt"
     lst.write_text("".join(f"file '{j[4].resolve()}'\n" for j in jobs))
     out = pathlib.Path(a.out)

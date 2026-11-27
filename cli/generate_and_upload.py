@@ -118,7 +118,7 @@ def main():
         python_exe, str(ENGINE_DIR / "render.py"),
         "--project", str(proj),
         "--size", render_size,
-        "--workers", "2",
+        "--workers", "1",
         "--out", str(out_mp4),
         "--audio", str(audio_track)
     ], desc=f"Render Video ({render_size})")
