@@ -73,6 +73,14 @@ def main():
         for font_file in engine_fonts.glob("*.ttf"):
             shutil.copy2(font_file, proj / "fonts" / font_file.name)
 
+    # Copy photos & photos.json if available
+    root_assets = pathlib.Path(__file__).resolve().parent.parent / "assets"
+    if (root_assets / "photos").exists():
+        for pfile in (root_assets / "photos").glob("*.*"):
+            shutil.copy2(pfile, proj / "assets" / "photos" / pfile.name)
+    if (root_assets / "photos.json").exists():
+        shutil.copy2(root_assets / "photos.json", proj / "photos.json")
+
     # 1. Write script.json
     script_path = proj / "script.json"
     script_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")

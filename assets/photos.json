@@ -1,0 +1,25 @@
+{
+  "grade": "natural",
+  "photos": [
+    {
+      "id": "multan_city",
+      "file": "multan_city.jpg",
+      "kind": "color"
+    },
+    {
+      "id": "multan_fort",
+      "file": "multan_fort.jpg",
+      "kind": "color"
+    },
+    {
+      "id": "raja_veer",
+      "file": "raja_veer.jpg",
+      "kind": "color"
+    },
+    {
+      "id": "baba_fazal",
+      "file": "baba_fazal.jpg",
+      "kind": "color"
+    }
+  ]
+}

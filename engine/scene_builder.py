@@ -1,6 +1,7 @@
 """
 scene_builder.py — Generates scene.py dynamically from JSON config for 16:9 and 9:16 aspect ratios.
-Supports all 7 visual looks, tactile documentary pinboard animations, and multilingual RTL shaping.
+Supports all 7 visual looks, tactile documentary pinboard animations, 3D cartoon artwork prints,
+and multilingual RTL shaping.
 """
 
 import json
@@ -58,12 +59,14 @@ PALETTES = {
     }
 }
 
+DEFAULT_PHOTOS = ["multan_city", "multan_fort", "raja_veer", "baba_fazal"]
+
 
 def generate_scene_code(config: dict, aspect_ratio: str = "16:9") -> str:
-    look = config.get("look", "wall")
+    look = config.get("look", "paper")
     title = config.get("title", "Cinematic Film")
     takes = config.get("takes", [])
-    colors = PALETTES.get(look, PALETTES["wall"])
+    colors = PALETTES.get(look, PALETTES["paper"])
     is_vertical = aspect_ratio == "9:16"
 
     # Flatten lines to assign items
@@ -73,15 +76,16 @@ def generate_scene_code(config: dict, aspect_ratio: str = "16:9") -> str:
             all_lines.append(l)
 
     n_lines = len(all_lines)
-    gap = 4200 if not is_vertical else 3600
+    gap = 5800 if not is_vertical else 4200
     xs = [i * gap for i in range(max(1, n_lines))]
     mid_x = (xs[0] + xs[-1]) / 2 if xs else 0
 
-    card_w = 3400 if not is_vertical else 2600
-    card_h = 2000 if not is_vertical else 3000
+    card_w = 2200 if not is_vertical else 2400
+    card_h = 1800 if not is_vertical else 1600
+    photo_w = 2100 if not is_vertical else 2200
 
     code = f'''"""Auto-generated scene.py for {title} ({aspect_ratio}, look={look})"""
-from engine import Film, BigText, Card, Counter, PenMark, Route, Stamp, MapPin
+from engine import Film, BigText, Card, Counter, PenMark, Route, Stamp, MapPin, Print
 
 LOOK = "{look}"
 ACCENT = {colors["accent"]}
@@ -96,10 +100,10 @@ def build_film(doc):
 
     # Main Title
     film.add(BigText("{title}", {mid_x}, -2400, 650, L(1) - 0.1, font="cond", rgb=ACCENT, shadow=True, grunge=True, rules=True))
-    film.add(PenMark("underline", {mid_x}, -2100, 5000, 60, t_in=L(1) + 0.4, dur=0.6, width=32, rgb=SECONDARY))
+    film.add(PenMark("underline", {mid_x}, -2100, 5200, 60, t_in=L(1) + 0.4, dur=0.6, width=32, rgb=SECONDARY))
 '''
 
-    # Generate Cards, Pins, Counters, Stamps
+    # Generate Hybrid: Cartoon Print + Evidence Card + Stamp + Route
     for i, line in enumerate(all_lines):
         line_id = line.get("id", i + 1)
         card_title = line.get("typed", line.get("hero", f"Scene {line_id}"))
@@ -107,30 +111,48 @@ def build_film(doc):
         x_pos = xs[i] if i < len(xs) else i * gap
         accent_col = "ACCENT" if i % 2 == 0 else "SECONDARY"
         rot_deg = -2.0 if line_id % 2 == 1 else 1.8
+        photo_key = line.get("photo", DEFAULT_PHOTOS[i % len(DEFAULT_PHOTOS)])
 
-        code += f'''
-    # Line {line_id} - Card & Pin
-    film.add(Card({x_pos}, 200, {card_w}, {card_h}, L({line_id}) + 0.1,
+        if not is_vertical:
+            # 16:9 Landscape Layout: Cartoon Print on left, Card on right
+            code += f'''
+    # Line {line_id} - Cartoon Character Print + Evidence Card
+    film.add(Print("{photo_key}", {x_pos - 1250}, 200, {photo_w}, rot={-rot_deg}, t_in=L({line_id}), border=0.04, pin=True))
+    film.add(Card({x_pos + 1250}, 200, {card_w}, {card_h}, L({line_id}) + 0.15,
                   title="{card_title}",
                   lines=["{spoken[:55].replace('"', '')}", "{spoken[55:110].replace('"', '')}"],
                   rgb=CARD_BG, text_rgb=TEXT_COLOR, accent={accent_col},
-                  rot={rot_deg}, title_size=260, body_size=150))
-    film.add(MapPin({x_pos}, {int(200 - card_h / 2 + 100)}, t_in=L({line_id}) + 0.35, size=1.2))
+                  rot={rot_deg}, title_size=230, body_size=135))
+'''
+        else:
+            # 9:16 Vertical Layout: Cartoon Print on top, Card below
+            code += f'''
+    # Line {line_id} - Cartoon Character Print (Top) + Evidence Card (Bottom)
+    film.add(Print("{photo_key}", {x_pos}, -700, {photo_w}, rot={-rot_deg}, t_in=L({line_id}), border=0.04, pin=True))
+    film.add(Card({x_pos}, 1100, {card_w}, {card_h}, L({line_id}) + 0.15,
+                  title="{card_title}",
+                  lines=["{spoken[:55].replace('"', '')}", "{spoken[55:110].replace('"', '')}"],
+                  rgb=CARD_BG, text_rgb=TEXT_COLOR, accent={accent_col},
+                  rot={rot_deg}, title_size=210, body_size=125))
 '''
 
         # Stamp if specified
         if line.get("stamp"):
             stamp_rot = -8.0 if line_id % 2 == 1 else 7.5
-            code += f'    film.add(Stamp("{line["stamp"]}", {x_pos} + 950, -450, size=150, rot={stamp_rot}, t_in=L({line_id}) + 0.9, rgb=STAMP_COLOR))\n'
+            stamp_x = x_pos + 2150 if not is_vertical else x_pos + 850
+            stamp_y = -500 if not is_vertical else 400
+            code += f'    film.add(Stamp("{line["stamp"]}", {stamp_x}, {stamp_y}, size=150, rot={stamp_rot}, t_in=L({line_id}) + 0.9, rgb=STAMP_COLOR))\n'
 
-        # Route connection between cards
+        # Route connection between stations
         if i > 0:
             prev_x = xs[i - 1]
-            bend = -0.25 if i % 2 == 1 else 0.25
-            code += f'    film.add(Route(({prev_x} + {card_w} / 2 + 80, 200), ({x_pos} - {card_w} / 2 - 80, 200), t_in=L({line_id}) - 0.2, dur=0.6, bend={bend}, width=28, rgb={accent_col}))\n'
+            bend = -0.22 if i % 2 == 1 else 0.22
+            from_pt = f"({prev_x} + 2350, 200)" if not is_vertical else f"({prev_x}, 1800)"
+            to_pt = f"({x_pos} - 2350, 200)" if not is_vertical else f"({x_pos}, -1400)"
+            code += f'    film.add(Route({from_pt}, {to_pt}, t_in=L({line_id}) - 0.2, dur=0.6, bend={bend}, width=28, rgb={accent_col}))\n'
 
-    # Camera Choreography with Dynamic Panning & Subtle Rotation
-    zoom = 0.55 if not is_vertical else 0.45
+    # Camera Choreography framing both cartoon illustration and card
+    zoom = 0.50 if not is_vertical else 0.42
     code += f'''
     # Camera Choreography
     film.shot(0.0, {mid_x}, -2300, {zoom * 0.9:.2f})
@@ -140,16 +162,17 @@ def build_film(doc):
     for i, line in enumerate(all_lines):
         line_id = line.get("id", i + 1)
         x_pos = xs[i] if i < len(xs) else i * gap
-        cam_rot = -0.35 if line_id % 2 == 0 else 0.35
-        code += f'''    film.shot(L({line_id}) + 0.3, {x_pos}, 400, {zoom:.2f}, rot={cam_rot})
-    film.shot(E({line_id}) - 0.1, {x_pos} + 120, 480, {zoom * 0.95:.2f})
+        cam_rot = -0.30 if line_id % 2 == 0 else 0.30
+        y_pos = 220 if not is_vertical else 200
+        code += f'''    film.shot(L({line_id}) + 0.3, {x_pos}, {y_pos}, {zoom:.2f}, rot={cam_rot})
+    film.shot(E({line_id}) - 0.1, {x_pos} + 80, {y_pos + 40}, {zoom * 0.96:.2f})
 '''
 
-    # Final Wide Pull-Back
+    # Final Wide Pull-Back: reveals all cartoon prints & cards across the board
     code += f'''
     # Final Wide Pull-Back
-    film.shot(doc.duration - 2.5, {mid_x}, 250, {zoom * 0.45:.2f})
-    film.shot(film.duration, {mid_x}, 150, {zoom * 0.35:.2f}, radius=20000, strength=0.1)
+    film.shot(doc.duration - 2.5, {mid_x}, 200, {zoom * 0.32:.2f})
+    film.shot(film.duration, {mid_x}, 150, {zoom * 0.26:.2f}, radius=20000, strength=0.1)
 
     return film
 '''
