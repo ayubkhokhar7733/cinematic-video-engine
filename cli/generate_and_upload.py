@@ -18,6 +18,7 @@ sys.path.insert(0, str(ENGINE_DIR))
 sys.path.insert(0, str(CORE_DIR))
 
 from scene_builder import generate_scene_code
+from gen_images import generate_topic_images
 
 RESOLUTIONS = {
     "16:9": {
@@ -86,6 +87,9 @@ def main():
     script_path = proj / "script.json"
     script_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"-> Script written to {script_path}")
+
+    # 1.5 Generate topic-relevant images for each beat
+    config = generate_topic_images(config, proj)
 
     # 2. Build scene.py dynamically
     scene_code = generate_scene_code(config, aspect_ratio=args.aspect_ratio)

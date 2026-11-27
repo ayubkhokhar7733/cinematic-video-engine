@@ -155,7 +155,9 @@ def fallback_to_edge_tts(txt_path: pathlib.Path, out_path: pathlib.Path, voice: 
     print("-> Falling back to Edge TTS voice engine...")
     edge_script = pathlib.Path(__file__).resolve().parent / "tts_edge.py"
     # Choose appropriate Edge fallback voice
-    edge_voice = "ur-PK-AsadNeural" if any(ord(ch) > 127 for ch in txt_path.read_text(encoding="utf-8")) else "en-US-ChristopherNeural"
+    txt = txt_path.read_text(encoding="utf-8")
+    is_urdu = any('\u0600' <= ch <= '\u06ff' or '\ufb50' <= ch <= '\ufeff' for ch in txt)
+    edge_voice = "ur-PK-AsadNeural" if is_urdu else "en-US-ChristopherNeural"
     subprocess.run([sys.executable, str(edge_script), str(txt_path), str(out_path), edge_voice], check=True)
 
 

@@ -41,13 +41,13 @@ WHITE = (246, 243, 236)
 # Font roles -> candidates, tried in order (family, weight). Drop <project>/fonts/<role>.ttf (or .otf)
 # to force a face, e.g. fonts/cond.ttf = Oswald Bold from Google Fonts (OFL).
 FONT_ROLES = {
-    "serif": [("Noto Sans Arabic", 400), ("Noto Nastaliq Urdu", 400), ("Baskerville", 400), ("Libre Baskerville", 400), ("Georgia", 400), ("Times New Roman", 400), ("DejaVu Serif", 400)],
-    "mono": [("Noto Sans Arabic", 700), ("Courier New", 700), ("Courier Prime", 700), ("Courier", 700), ("DejaVu Sans Mono", 700), ("Menlo", 700)],
-    "hand": [("Noto Nastaliq Urdu", 400), ("Noto Sans Arabic", 400), ("Snell Roundhand", 400), ("Homemade Apple", 400), ("Segoe Script", 400), ("Brush Script MT", 400), ("URW Chancery L", 400)],
-    "cond": [("Noto Sans Arabic", 700), ("DIN Condensed", 700), ("Oswald", 700), ("Bebas Neue", 400), ("Roboto Condensed", 700), ("Arial Narrow", 700),
-             ("DejaVu Sans Condensed", 700), ("Impact", 400)],
-    "label": [("Noto Sans Arabic", 800), ("Avenir Next", 800), ("Montserrat", 800), ("Helvetica Neue", 700), ("Arial", 700), ("DejaVu Sans", 700)],
-    "labelm": [("Noto Sans Arabic", 700), ("Avenir Next", 700), ("Montserrat", 600), ("Helvetica Neue", 500), ("Arial", 400), ("DejaVu Sans", 400)],
+    "serif": [("Baskerville", 400), ("Libre Baskerville", 400), ("Georgia", 400), ("Times New Roman", 400), ("DejaVu Serif", 400), ("Liberation Serif", 400)],
+    "mono": [("Courier New", 700), ("Courier Prime", 700), ("Courier", 700), ("DejaVu Sans Mono", 700), ("Liberation Mono", 700), ("Menlo", 700)],
+    "hand": [("Snell Roundhand", 400), ("Homemade Apple", 400), ("Segoe Script", 400), ("Brush Script MT", 400), ("URW Chancery L", 400)],
+    "cond": [("DIN Condensed", 700), ("Oswald", 700), ("Bebas Neue", 400), ("Roboto Condensed", 700), ("Arial Narrow", 700),
+             ("DejaVu Sans Condensed", 700), ("Liberation Sans", 700), ("Impact", 400)],
+    "label": [("Avenir Next", 800), ("Montserrat", 800), ("Helvetica Neue", 700), ("Arial", 700), ("DejaVu Sans", 700), ("Liberation Sans", 700)],
+    "labelm": [("Avenir Next", 700), ("Montserrat", 600), ("Helvetica Neue", 500), ("Arial", 400), ("DejaVu Sans", 400), ("Liberation Sans", 400)],
 }
 
 # Looks: the board under everything plus the film finish. A scene picks one with Film(look=...).
@@ -212,10 +212,11 @@ class Res:
             self.imgs[key] = skia.Image.fromarray(arr, colorType=skia.ColorType.kRGBA_8888_ColorType).withDefaultMipmaps()
         return self.imgs[key]
 
-    def typeface(self, name):
-        if name not in self.tf:
-            self.tf[name] = resolve_typeface(name, self.fonts_dir)[0]
-        return self.tf[name]
+    def typeface(self, name, is_arabic=False):
+        key = (name, bool(is_arabic))
+        if key not in self.tf:
+            self.tf[key] = resolve_typeface(name, self.fonts_dir, is_arabic=is_arabic)[0]
+        return self.tf[key]
 
     def wear(self):
         """Speckle mask that distresses type and stamps (alpha = where ink is knocked out)."""
@@ -227,40 +228,46 @@ class Res:
             self.imgs["wear"] = skia.Image.fromarray(arr, colorType=skia.ColorType.kRGBA_8888_ColorType)
         return self.imgs["wear"]
 
-    def font(self, name, size):
-        f = skia.Font(self.typeface(name), size)
+    def font(self, name, size, is_arabic=False):
+        f = skia.Font(self.typeface(name, is_arabic=is_arabic), size)
         f.setSubpixel(True); f.setEdging(skia.Font.Edging.kAntiAlias)
         return f
 
 
-def resolve_typeface(role, fonts_dir=None):
-    """(typeface, description) for a font role: project override file, engine bundled font, then candidate families."""
-    # 1. Project fonts directory
-    if fonts_dir:
-        for ext in (".ttf", ".otf"):
-            p = pathlib.Path(fonts_dir) / f"{role}{ext}"
-            if p.exists():
-                tf = skia.Typeface.MakeFromFile(str(p))
-                if tf:
-                    return tf, f"{p.name} (project file)"
+def resolve_typeface(role, fonts_dir=None, is_arabic=False):
+    """(typeface, description) for a font role. Uses Arabic/Urdu fonts only when is_arabic=True."""
+    if is_arabic:
+        # 1. Project fonts directory
+        if fonts_dir:
+            for ext in (".ttf", ".otf"):
+                p = pathlib.Path(fonts_dir) / f"{role}{ext}"
+                if p.exists():
+                    tf = skia.Typeface.MakeFromFile(str(p))
+                    if tf:
+                        return tf, f"{p.name} (project file)"
 
-    # 2. Engine's own bundled fonts directory (fallback if not in project dir)
-    engine_fonts_dir = pathlib.Path(__file__).resolve().parent / "fonts"
-    if engine_fonts_dir.exists():
-        for ext in (".ttf", ".otf"):
-            p = engine_fonts_dir / f"{role}{ext}"
-            if p.exists():
-                tf = skia.Typeface.MakeFromFile(str(p))
+        # 2. Engine's own bundled fonts directory (Noto Sans Arabic)
+        engine_fonts_dir = pathlib.Path(__file__).resolve().parent / "fonts"
+        if engine_fonts_dir.exists():
+            for ext in (".ttf", ".otf"):
+                p = engine_fonts_dir / f"{role}{ext}"
+                if p.exists():
+                    tf = skia.Typeface.MakeFromFile(str(p))
+                    if tf:
+                        return tf, f"{p.name} (engine bundled)"
+            fallback = engine_fonts_dir / "cond.ttf"
+            if fallback.exists():
+                tf = skia.Typeface.MakeFromFile(str(fallback))
                 if tf:
-                    return tf, f"{p.name} (engine bundled)"
-        # Default fallback to cond.ttf in engine fonts
-        fallback = engine_fonts_dir / "cond.ttf"
-        if fallback.exists():
-            tf = skia.Typeface.MakeFromFile(str(fallback))
-            if tf:
-                return tf, "cond.ttf (engine fallback)"
+                    return tf, "cond.ttf (engine fallback)"
 
-    # 3. System font candidates (including Noto Sans Arabic)
+        mgr = skia.FontMgr.RefDefault()
+        for fam, weight in [("Noto Sans Arabic", 700), ("Noto Nastaliq Urdu", 400)]:
+            tf = mgr.matchFamilyStyle(fam, skia.FontStyle(weight, 5, skia.FontStyle.kUpright_Slant))
+            if tf is not None and tf.getFamilyName().lower() == fam.lower():
+                return tf, f"{fam} {weight}"
+
+    # Latin / English font candidates
     mgr = skia.FontMgr.RefDefault()
     for fam, weight in FONT_ROLES.get(role, []):
         tf = mgr.matchFamilyStyle(fam, skia.FontStyle(weight, 5, skia.FontStyle.kUpright_Slant))
@@ -297,7 +304,7 @@ def draw_text(c, res, text, x, y, size, font="serif", rgb=CREAM, a=1.0, track=0.
             text = get_display(arabic_reshaper.reshape(text))
         except Exception:
             pass
-    f = res.font(font, size)
+    f = res.font(font, size, is_arabic=is_arabic)
     widths = f.getWidths(f.textToGlyphs(text))
     gap = track * size
     total = sum(widths) + gap * (len(text) - 1)
@@ -324,7 +331,7 @@ def text_width(res, text, size, font="serif", track=0.0):
             text = get_display(arabic_reshaper.reshape(text))
         except Exception:
             pass
-    f = res.font(font, size)
+    f = res.font(font, size, is_arabic=is_arabic)
     return sum(f.getWidths(f.textToGlyphs(text))) + track * size * (len(text) - 1)
 
 
