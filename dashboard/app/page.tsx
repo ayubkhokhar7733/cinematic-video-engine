@@ -16,7 +16,8 @@ import {
   RefreshCw,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Wand2
 } from 'lucide-react';
 
 interface BeatLine {
@@ -82,10 +83,17 @@ export default function Home() {
   const [privacy, setPrivacy] = useState<'unlisted' | 'private' | 'public'>('unlisted');
   const [beats, setBeats] = useState<BeatLine[]>(PRESETS.multan.beats);
 
+  // AI Story Generation State
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiLanguage, setAiLanguage] = useState<'urdu' | 'english'>('urdu');
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
   // Settings
   const [showSettings, setShowSettings] = useState(false);
   const [githubToken, setGithubToken] = useState('');
   const [githubRepo, setGithubRepo] = useState('ayubkhokhar7733/cinematic-video-engine');
+  const [groqApiKey, setGroqApiKey] = useState('');
 
   // Status & Runs
   const [isDispatching, setIsDispatching] = useState(false);
@@ -96,13 +104,16 @@ export default function Home() {
   useEffect(() => {
     const savedToken = localStorage.getItem('cve_github_token') || '';
     const savedRepo = localStorage.getItem('cve_github_repo') || 'ayubkhokhar7733/cinematic-video-engine';
+    const savedGroq = localStorage.getItem('cve_groq_api_key') || '';
     setGithubToken(savedToken);
     setGithubRepo(savedRepo);
+    setGroqApiKey(savedGroq);
   }, []);
 
   const saveSettings = () => {
     localStorage.setItem('cve_github_token', githubToken);
     localStorage.setItem('cve_github_repo', githubRepo);
+    localStorage.setItem('cve_groq_api_key', groqApiKey);
     setShowSettings(false);
     fetchRuns();
   };
@@ -128,6 +139,48 @@ export default function Home() {
       return () => clearInterval(interval);
     }
   }, [githubToken, githubRepo]);
+
+  const handleGenerateStory = async () => {
+    if (!aiTopic.trim()) return;
+    setIsGeneratingAi(true);
+    setAiError(null);
+
+    try {
+      const res = await fetch('/api/generate-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: aiTopic,
+          language: aiLanguage,
+          groqApiKey: groqApiKey
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(data.error || 'Failed to generate script');
+      } else {
+        if (data.title) setTitle(data.title);
+        if (data.look) setLook(data.look);
+        if (data.voice) setVoice(data.voice);
+        if (Array.isArray(data.beats) && data.beats.length > 0) {
+          setBeats(
+            data.beats.map((b: any, i: number) => ({
+              id: i + 1,
+              text: b.text || '',
+              spoken: b.text || '',
+              typed: b.typed || `Beat ${i + 1}`,
+              stamp: b.stamp || ''
+            }))
+          );
+        }
+      }
+    } catch (err: any) {
+      setAiError(err.message || 'Network error');
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
 
   const applyPreset = (key: 'multan' | 'explainer') => {
     const p = PRESETS[key];
@@ -224,6 +277,9 @@ export default function Home() {
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                 <CloudLightning className="w-3 h-3" /> GitHub Compute
               </span>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 flex items-center gap-1">
+                <Wand2 className="w-3 h-3" /> Groq AI Scripting
+              </span>
             </div>
             <p className="text-xs text-slate-400">Automated Code-to-Video Engine & YouTube Uploader</p>
           </div>
@@ -261,11 +317,23 @@ export default function Home() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-base flex items-center gap-2">
-                <Settings className="w-4 h-4 text-amber-400" /> GitHub Actions Credentials
+                <Settings className="w-4 h-4 text-amber-400" /> Studio & AI API Settings
               </h3>
               <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-white">✕</button>
             </div>
             <div className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Groq API Key (AI Script Director)</label>
+                <input
+                  type="password"
+                  value={groqApiKey}
+                  onChange={(e) => setGroqApiKey(e.target.value)}
+                  placeholder="gsk_..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 font-mono"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">Pre-filled with your Groq API key from story-flow.</p>
+              </div>
+
               <div>
                 <label className="block text-slate-300 mb-1 font-medium">GitHub Repository</label>
                 <input
@@ -276,6 +344,7 @@ export default function Home() {
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
+
               <div>
                 <label className="block text-slate-300 mb-1 font-medium">GitHub Personal Access Token (PAT)</label>
                 <input
@@ -283,10 +352,11 @@ export default function Home() {
                   value={githubToken}
                   onChange={(e) => setGithubToken(e.target.value)}
                   placeholder="ghp_... with repo & workflow scope"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 font-mono"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">Saved locally in your browser. Required to trigger GitHub Actions compute.</p>
+                <p className="text-[11px] text-slate-500 mt-1">Saved in your browser localStorage. Used to trigger GitHub Actions compute.</p>
               </div>
+
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   onClick={() => setShowSettings(false)}
@@ -298,7 +368,7 @@ export default function Home() {
                   onClick={saveSettings}
                   className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-500 shadow-md shadow-indigo-600/30"
                 >
-                  Save Credentials
+                  Save Settings
                 </button>
               </div>
             </div>
@@ -356,7 +426,7 @@ export default function Home() {
                   onChange={(e: any) => setResolution(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
-                  <option value="720p">720p HD (Fast Cloud Render ~2-3 min)</option>
+                  <option value="720p">720p HD (Fast Cloud Render ~1-2 min)</option>
                   <option value="1080p">1080p Full HD (Production Quality)</option>
                 </select>
               </div>
@@ -450,6 +520,64 @@ export default function Home() {
 
         {/* Middle Column: Script & Scene Storyboard */}
         <div className="lg:col-span-5 space-y-6">
+          {/* AI Story Generator Bar */}
+          <div className="bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-slate-900/80 border border-indigo-500/40 rounded-2xl p-5 space-y-3.5 shadow-2xl relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-2">
+                <Wand2 className="w-4 h-4 text-indigo-400 animate-pulse" /> AI Documentary Director (Powered by Groq)
+              </h2>
+              <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-lg p-0.5 text-[11px]">
+                <button
+                  onClick={() => setAiLanguage('urdu')}
+                  className={`px-2 py-0.5 rounded font-medium transition ${aiLanguage === 'urdu' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  اردو (Urdu)
+                </button>
+                <button
+                  onClick={() => setAiLanguage('english')}
+                  className={`px-2 py-0.5 rounded font-medium transition ${aiLanguage === 'english' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  English
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={aiTopic}
+                onChange={(e) => setAiTopic(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleGenerateStory()}
+                placeholder={aiLanguage === 'urdu' ? "موضوع درج کریں (مثال: موہنجوداڑو کا راز، سلطنت عثمانیہ، سقوطِ بغداد)..." : "Enter topic (e.g., Mystery of Mohenjo-Daro, Fall of Constantinople, Rise of Rome)..."}
+                className="flex-1 bg-slate-950 border border-indigo-500/30 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 shadow-inner"
+              />
+              <button
+                onClick={handleGenerateStory}
+                disabled={isGeneratingAi || !aiTopic.trim()}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition disabled:opacity-50 shrink-0"
+              >
+                {isGeneratingAi ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Writing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Generate Script</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {aiError && (
+              <div className="text-[11px] text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg p-2 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{aiError}</span>
+              </div>
+            )}
+          </div>
+
           <div className="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
@@ -475,7 +603,7 @@ export default function Home() {
             </div>
 
             {/* Beats List */}
-            <div className="space-y-3 max-h-[620px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
               {beats.map((beat, idx) => (
                 <div key={beat.id} className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/90 space-y-2.5 relative group">
                   <div className="flex items-center justify-between">
