@@ -98,9 +98,10 @@ def build_film(doc):
     L, E = doc.L, doc.E
     film = Film(doc.duration, fps=30, look=LOOK)
 
-    # Main Title
-    film.add(BigText("{title}", {mid_x}, -2400, 650, L(1) - 0.1, font="cond", rgb=ACCENT, shadow=True, grunge=True, rules=True))
-    film.add(PenMark("underline", {mid_x}, -2100, 5200, 60, t_in=L(1) + 0.4, dur=0.6, width=32, rgb=SECONDARY))
+    # Main Title — solid dark bar keeps text readable over any photo
+    film.add(BigText("{title}", {mid_x}, -4000, 650, L(1) - 0.1, font="cond", rgb=ACCENT, shadow=True, grunge=True, rules=True,
+              bar=(14, 12, 10), bar_h=0.95))
+    film.add(PenMark("underline", {mid_x}, -3650, 5200, 60, t_in=L(1) + 0.4, dur=0.6, width=32, rgb=SECONDARY))
 '''
 
     # Generate Hybrid: Cartoon Print + Evidence Card + Stamp + Route
@@ -154,9 +155,11 @@ def build_film(doc):
     # Camera Choreography framing both cartoon illustration and card
     zoom = 0.50 if not is_vertical else 0.42
     code += f'''
-    # Camera Choreography
-    film.shot(0.0, {mid_x}, -2300, {zoom * 0.9:.2f})
-    film.shot(E(1) + 0.2, {mid_x}, -1200, {zoom * 0.65:.2f})
+    # Camera Choreography — title-only opener, then glide into the board
+    film.shot(0.0, {mid_x}, -4000, {zoom * 0.72:.2f})    # tight title frame
+    film.shot(0.6, {mid_x}, -4000, {zoom * 0.68:.2f})    # subtle push-in
+    film.shot(E(1) - 0.3, {mid_x}, -400, {zoom * 0.60:.2f})  # glide down to cards
+    film.shot(E(1) + 0.2, {mid_x}, 150, {zoom * 0.56:.2f})   # settle on board
 '''
 
     for i, line in enumerate(all_lines):
