@@ -35,14 +35,11 @@ RESOLUTIONS = {
 
 
 def run_cmd(cmd, desc=""):
-    print(f"\n[RUNNING] {desc or 'command'}: {' '.join(str(x) for x in cmd)}")
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    print(f"\n[RUNNING] {desc or 'command'}: {' '.join(str(x) for x in cmd)}", flush=True)
+    res = subprocess.run(cmd)
     if res.returncode != 0:
-        print(f"[ERROR] Stderr: {res.stderr[-1500:]}")
         sys.exit(f"Step failed: {desc}")
-    if res.stdout.strip():
-        print(res.stdout[-1000:].strip())
-    return res.stdout
+    return ""
 
 
 def main():
@@ -121,6 +118,7 @@ def main():
         python_exe, str(ENGINE_DIR / "render.py"),
         "--project", str(proj),
         "--size", render_size,
+        "--workers", "2",
         "--out", str(out_mp4),
         "--audio", str(audio_track)
     ], desc=f"Render Video ({render_size})")
