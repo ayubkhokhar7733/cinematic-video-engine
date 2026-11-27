@@ -99,8 +99,10 @@ jobs:
 
       - name: Prepare Script Payload
         id: prepare
+        env:
+          SCRIPT_PAYLOAD: ${{ inputs.script_payload }}
         run: |
-          if [ -z "${{ inputs.script_payload }}" ]; then
+          if [ -z "$SCRIPT_PAYLOAD" ]; then
             cat << 'EOF' > payload.json
           {
             "title": "${{ inputs.title }}",
@@ -152,7 +154,7 @@ jobs:
           }
           EOF
           else
-            echo '${{ inputs.script_payload }}' > payload.json
+            echo "$SCRIPT_PAYLOAD" > payload.json
           fi
 
       - name: Execute Cinematic Generation & Upload
