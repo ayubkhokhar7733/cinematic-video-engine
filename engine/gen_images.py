@@ -21,7 +21,7 @@ def generate_image_cloudflare(prompt: str, out_path: pathlib.Path) -> bool:
         return False
 
     url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/black-forest-labs/flux-1-schnell"
-    payload = json.dumps({"prompt": prompt, "num_steps": 4}).encode("utf-8")
+    payload = json.dumps({"prompt": prompt}).encode("utf-8")
     req = urllib.request.Request(
         url,
         data=payload,
@@ -43,6 +43,9 @@ def generate_image_cloudflare(prompt: str, out_path: pathlib.Path) -> bool:
             if b64:
                 out_path.write_bytes(base64.b64decode(b64))
                 return True
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="ignore")[:300]
+        print(f"  [Cloudflare AI] HTTP {e.code}: {err_body}", flush=True)
     except Exception as e:
         print(f"  [Cloudflare AI] Failed: {e}", flush=True)
     return False
