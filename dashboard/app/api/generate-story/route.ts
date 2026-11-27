@@ -5,15 +5,24 @@ export async function POST(req: Request) {
     const body = await req.json();
     const topic = body.topic || 'قدیم تاریخ';
     const language = body.language || 'urdu'; // 'urdu' or 'english'
+    const duration = body.duration || 'short'; // 'short' | 'medium' | 'long' | 'deep'
     const provider = body.provider || (body.geminiApiKey ? 'gemini' : 'groq');
     const geminiKey = body.geminiApiKey || process.env.GEMINI_API_KEY;
     const groqKey = body.groqApiKey || process.env.GROQ_API_KEY;
+
+    const beatGuide: Record<string, string> = {
+      short: '4 to 5 beats (~30 seconds total)',
+      medium: '10 to 12 beats (~2 minutes total)',
+      long: '20 to 25 beats (~5 minutes total)',
+      deep: '32 to 40 beats (~8-10 minutes total)',
+    };
+    const targetBeats = beatGuide[duration] || beatGuide.short;
 
     const systemPrompt = `You are an elite, award-winning historical documentary director and scriptwriter (like Vox, Johnny Harris, BBC History, and National Geographic).
 Your job is to generate a dramatic, highly engaging multi-beat documentary script for a programmatic 2D cinematic camera engine.
 
 RULES:
-1. Generate between 4 to 6 beats.
+1. Generate ${targetBeats}.
 2. Beat #1 MUST be an irresistible hook.
 3. Middle beats explore historical escalation, dramatic facts, armies, rulers, or discoveries.
 4. Final beat offers an emotional or philosophical closing thought.

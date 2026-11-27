@@ -95,6 +95,7 @@ export default function Home() {
   // AI Story Generation State
   const [aiTopic, setAiTopic] = useState('');
   const [aiLanguage, setAiLanguage] = useState<'urdu' | 'english'>('urdu');
+  const [aiDuration, setAiDuration] = useState<'short' | 'medium' | 'long' | 'deep'>('short');
   const [aiProvider, setAiProvider] = useState<'gemini' | 'groq'>('gemini');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -166,6 +167,7 @@ export default function Home() {
         body: JSON.stringify({
           topic: aiTopic,
           language: aiLanguage,
+          duration: aiDuration,
           provider: aiProvider,
           geminiApiKey: geminiApiKey,
           groqApiKey: groqApiKey
@@ -608,6 +610,18 @@ export default function Home() {
                     English
                   </button>
                 </div>
+
+                {/* Video Length selector */}
+                <select
+                  value={aiDuration}
+                  onChange={(e) => setAiDuration(e.target.value as any)}
+                  className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="short">⚡ Short (~30s)</option>
+                  <option value="medium">🎬 Medium (~2 min)</option>
+                  <option value="long">📽️ Long (~5 min)</option>
+                  <option value="deep">🎞️ Deep Dive (~8-10 min)</option>
+                </select>
               </div>
             </div>
 
