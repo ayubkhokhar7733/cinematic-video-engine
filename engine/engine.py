@@ -41,13 +41,13 @@ WHITE = (246, 243, 236)
 # Font roles -> candidates, tried in order (family, weight). Drop <project>/fonts/<role>.ttf (or .otf)
 # to force a face, e.g. fonts/cond.ttf = Oswald Bold from Google Fonts (OFL).
 FONT_ROLES = {
-    "serif": [("Baskerville", 400), ("Libre Baskerville", 400), ("Georgia", 400), ("Times New Roman", 400), ("DejaVu Serif", 400)],
-    "mono": [("Courier New", 700), ("Courier Prime", 700), ("Courier", 700), ("DejaVu Sans Mono", 700), ("Menlo", 700)],
-    "hand": [("Snell Roundhand", 400), ("Homemade Apple", 400), ("Segoe Script", 400), ("Brush Script MT", 400), ("URW Chancery L", 400)],
-    "cond": [("DIN Condensed", 700), ("Oswald", 700), ("Bebas Neue", 400), ("Roboto Condensed", 700), ("Arial Narrow", 700),
+    "serif": [("Noto Sans Arabic", 400), ("Noto Nastaliq Urdu", 400), ("Baskerville", 400), ("Libre Baskerville", 400), ("Georgia", 400), ("Times New Roman", 400), ("DejaVu Serif", 400)],
+    "mono": [("Noto Sans Arabic", 700), ("Courier New", 700), ("Courier Prime", 700), ("Courier", 700), ("DejaVu Sans Mono", 700), ("Menlo", 700)],
+    "hand": [("Noto Nastaliq Urdu", 400), ("Noto Sans Arabic", 400), ("Snell Roundhand", 400), ("Homemade Apple", 400), ("Segoe Script", 400), ("Brush Script MT", 400), ("URW Chancery L", 400)],
+    "cond": [("Noto Sans Arabic", 700), ("DIN Condensed", 700), ("Oswald", 700), ("Bebas Neue", 400), ("Roboto Condensed", 700), ("Arial Narrow", 700),
              ("DejaVu Sans Condensed", 700), ("Impact", 400)],
-    "label": [("Avenir Next", 800), ("Montserrat", 800), ("Helvetica Neue", 700), ("Arial", 700), ("DejaVu Sans", 700)],
-    "labelm": [("Avenir Next", 700), ("Montserrat", 600), ("Helvetica Neue", 500), ("Arial", 400), ("DejaVu Sans", 400)],
+    "label": [("Noto Sans Arabic", 800), ("Avenir Next", 800), ("Montserrat", 800), ("Helvetica Neue", 700), ("Arial", 700), ("DejaVu Sans", 700)],
+    "labelm": [("Noto Sans Arabic", 700), ("Avenir Next", 700), ("Montserrat", 600), ("Helvetica Neue", 500), ("Arial", 400), ("DejaVu Sans", 400)],
 }
 
 # Looks: the board under everything plus the film finish. A scene picks one with Film(look=...).
@@ -234,7 +234,8 @@ class Res:
 
 
 def resolve_typeface(role, fonts_dir=None):
-    """(typeface, description) for a font role: project override file, then the candidates, then the default."""
+    """(typeface, description) for a font role: project override file, engine bundled font, then candidate families."""
+    # 1. Project fonts directory
     if fonts_dir:
         for ext in (".ttf", ".otf"):
             p = pathlib.Path(fonts_dir) / f"{role}{ext}"
@@ -242,6 +243,24 @@ def resolve_typeface(role, fonts_dir=None):
                 tf = skia.Typeface.MakeFromFile(str(p))
                 if tf:
                     return tf, f"{p.name} (project file)"
+
+    # 2. Engine's own bundled fonts directory (fallback if not in project dir)
+    engine_fonts_dir = pathlib.Path(__file__).resolve().parent / "fonts"
+    if engine_fonts_dir.exists():
+        for ext in (".ttf", ".otf"):
+            p = engine_fonts_dir / f"{role}{ext}"
+            if p.exists():
+                tf = skia.Typeface.MakeFromFile(str(p))
+                if tf:
+                    return tf, f"{p.name} (engine bundled)"
+        # Default fallback to cond.ttf in engine fonts
+        fallback = engine_fonts_dir / "cond.ttf"
+        if fallback.exists():
+            tf = skia.Typeface.MakeFromFile(str(fallback))
+            if tf:
+                return tf, "cond.ttf (engine fallback)"
+
+    # 3. System font candidates (including Noto Sans Arabic)
     mgr = skia.FontMgr.RefDefault()
     for fam, weight in FONT_ROLES.get(role, []):
         tf = mgr.matchFamilyStyle(fam, skia.FontStyle(weight, 5, skia.FontStyle.kUpright_Slant))

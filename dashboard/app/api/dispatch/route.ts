@@ -18,6 +18,7 @@ export async function POST(req: Request) {
         title: body.title || 'Cinematic Film',
         script_payload: typeof body.script_payload === 'string' ? body.script_payload : JSON.stringify(body.script_payload),
         look: body.look || 'wall',
+        tts_provider: body.tts_provider || 'edge',
         voice: body.voice || 'ur-PK-AsadNeural',
         aspect_ratio: body.aspect_ratio || '16:9',
         resolution: body.resolution || '720p',

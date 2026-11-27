@@ -24,18 +24,19 @@ on:
           - studio
           - blueprint
           - night
+      tts_provider:
+        description: 'TTS Voice Engine'
+        required: true
+        default: 'edge'
+        type: choice
+        options:
+          - edge
+          - gemini
       voice:
         description: 'TTS Voice Model'
         required: true
         default: 'ur-PK-AsadNeural'
-        type: choice
-        options:
-          - ur-PK-AsadNeural
-          - ur-PK-UzmaNeural
-          - ur-IN-SalmanNeural
-          - en-US-ChristopherNeural
-          - en-US-JennyNeural
-          - en-US-GuyNeural
+        type: string
       aspect_ratio:
         description: 'Aspect Ratio'
         required: true
@@ -84,7 +85,7 @@ jobs:
       - name: Set up System FFmpeg & Graphics Libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg libavcodec-extra fonts-noto-core libegl1 libgl1 libglib2.0-0
+          sudo apt-get install -y ffmpeg libavcodec-extra fonts-noto-core fonts-noto-extra fonts-noto-ui-core libegl1 libgl1 libglib2.0-0
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -163,6 +164,7 @@ jobs:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           UPLOAD_FLAG=""
           if [ "${{ inputs.upload_youtube }}" = "true" ] && [ -n "${{ secrets.YOUTUBE_REFRESH_TOKEN }}" ]; then
@@ -172,6 +174,7 @@ jobs:
           python cli/generate_and_upload.py \
             --config payload.json \
             --project-dir run_output \
+            --tts-provider "${{ inputs.tts_provider }}" \
             --voice "${{ inputs.voice }}" \
             --aspect-ratio "${{ inputs.aspect_ratio }}" \
             --resolution "${{ inputs.resolution }}" \

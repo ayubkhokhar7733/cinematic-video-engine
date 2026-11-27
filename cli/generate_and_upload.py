@@ -48,7 +48,8 @@ def main():
     parser = argparse.ArgumentParser(description="Generate cinematic video and optionally upload to YouTube")
     parser.add_argument("--config", required=True, help="JSON configuration string or path to .json file")
     parser.add_argument("--project-dir", default="build_project", help="Working build directory")
-    parser.add_argument("--voice", default="ur-PK-AsadNeural", help="Edge TTS voice")
+    parser.add_argument("--tts-provider", choices=["edge", "gemini"], default="edge", help="TTS voice engine provider")
+    parser.add_argument("--voice", default="ur-PK-AsadNeural", help="Voice model or name")
     parser.add_argument("--aspect-ratio", choices=["16:9", "9:16"], default="16:9", help="Video aspect ratio")
     parser.add_argument("--resolution", choices=["720p", "1080p", "4k"], default="720p", help="Render resolution")
     parser.add_argument("--upload-youtube", action="store_true", help="Upload rendered video directly to YouTube")
@@ -96,9 +97,10 @@ def main():
     python_exe = sys.executable
     run_cmd([python_exe, str(ENGINE_DIR / "prep_assets.py"), "--project", str(proj)], desc="Prep Assets")
 
-    # 4. Synthesize voice takes via Edge TTS
-    cmd_tts = f'"{python_exe}" "{ENGINE_DIR / "tts_edge.py"}" {{txt}} {{out}} "{args.voice}"'
-    run_cmd([python_exe, str(ENGINE_DIR / "tts_say.py"), "--project", str(proj), "--cmd", cmd_tts], desc="Voice Takes Synthesis")
+    # 4. Synthesize voice takes via selected TTS engine
+    tts_script = ENGINE_DIR / "tts_gemini.py" if args.tts_provider == "gemini" else ENGINE_DIR / "tts_edge.py"
+    cmd_tts = f'"{python_exe}" "{tts_script}" {{txt}} {{out}} "{args.voice}"'
+    run_cmd([python_exe, str(ENGINE_DIR / "tts_say.py"), "--project", str(proj), "--cmd", cmd_tts], desc=f"Voice Takes Synthesis ({args.tts_provider.upper()})")
 
     # 5. Split takes into timed lines
     run_cmd([python_exe, str(ENGINE_DIR / "split_takes.py"), "--project", str(proj)], desc="Split Takes")

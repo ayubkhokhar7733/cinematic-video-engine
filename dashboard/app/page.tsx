@@ -39,12 +39,20 @@ const LOOKS = [
 ];
 
 const VOICES = [
-  { id: 'ur-PK-AsadNeural', label: 'Urdu: Asad (Deep Documentary)', lang: 'Urdu' },
-  { id: 'ur-PK-UzmaNeural', label: 'Urdu: Uzma (Clear Narrative)', lang: 'Urdu' },
-  { id: 'ur-IN-SalmanNeural', label: 'Urdu: Salman (Expressive)', lang: 'Urdu' },
-  { id: 'en-US-ChristopherNeural', label: 'English: Christopher (Documentary)', lang: 'English' },
-  { id: 'en-US-JennyNeural', label: 'English: Jenny (Natural Storyteller)', lang: 'English' },
-  { id: 'en-US-GuyNeural', label: 'English: Guy (Authoritative)', lang: 'English' }
+  // Gemini Studio AI Voices (Mature, Deep, Expressive)
+  { id: 'Charon', label: 'Gemini: Charon (Deep Mature Documentary)', provider: 'gemini', lang: 'Universal' },
+  { id: 'Fenrir', label: 'Gemini: Fenrir (Commanding & Resonant)', provider: 'gemini', lang: 'Universal' },
+  { id: 'Orus', label: 'Gemini: Orus (Steady & Authoritative)', provider: 'gemini', lang: 'Universal' },
+  { id: 'Kore', label: 'Gemini: Kore (Clear Narrative)', provider: 'gemini', lang: 'Universal' },
+  { id: 'Aoede', label: 'Gemini: Aoede (Sophisticated Storyteller)', provider: 'gemini', lang: 'Universal' },
+
+  // Edge-TTS Voices
+  { id: 'ur-PK-AsadNeural', label: 'Edge: Urdu - Asad (Classic Urdu)', provider: 'edge', lang: 'Urdu' },
+  { id: 'ur-PK-UzmaNeural', label: 'Edge: Urdu - Uzma (Narrative)', provider: 'edge', lang: 'Urdu' },
+  { id: 'ur-IN-SalmanNeural', label: 'Edge: Urdu - Salman (Expressive)', provider: 'edge', lang: 'Urdu' },
+  { id: 'en-US-ChristopherNeural', label: 'Edge: English - Christopher (Documentary)', provider: 'edge', lang: 'English' },
+  { id: 'en-US-JennyNeural', label: 'Edge: English - Jenny (Natural)', provider: 'edge', lang: 'English' },
+  { id: 'en-US-GuyNeural', label: 'Edge: English - Guy (News Anchor)', provider: 'edge', lang: 'English' }
 ];
 
 const PRESETS = {
@@ -77,6 +85,7 @@ export default function Home() {
   const [title, setTitle] = useState(PRESETS.multan.title);
   const [look, setLook] = useState('wall');
   const [voice, setVoice] = useState('ur-PK-AsadNeural');
+  const [ttsProvider, setTtsProvider] = useState<'edge' | 'gemini'>('edge');
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16'>('16:9');
   const [resolution, setResolution] = useState<'720p' | '1080p'>('720p');
   const [uploadYoutube, setUploadYoutube] = useState(true);
@@ -86,6 +95,7 @@ export default function Home() {
   // AI Story Generation State
   const [aiTopic, setAiTopic] = useState('');
   const [aiLanguage, setAiLanguage] = useState<'urdu' | 'english'>('urdu');
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'groq'>('gemini');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
@@ -93,6 +103,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [githubToken, setGithubToken] = useState('');
   const [githubRepo, setGithubRepo] = useState('ayubkhokhar7733/cinematic-video-engine');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
   const [groqApiKey, setGroqApiKey] = useState('');
 
   // Status & Runs
@@ -104,15 +115,18 @@ export default function Home() {
   useEffect(() => {
     const savedToken = localStorage.getItem('cve_github_token') || '';
     const savedRepo = localStorage.getItem('cve_github_repo') || 'ayubkhokhar7733/cinematic-video-engine';
+    const savedGemini = localStorage.getItem('cve_gemini_api_key') || '';
     const savedGroq = localStorage.getItem('cve_groq_api_key') || '';
     setGithubToken(savedToken);
     setGithubRepo(savedRepo);
+    setGeminiApiKey(savedGemini);
     setGroqApiKey(savedGroq);
   }, []);
 
   const saveSettings = () => {
     localStorage.setItem('cve_github_token', githubToken);
     localStorage.setItem('cve_github_repo', githubRepo);
+    localStorage.setItem('cve_gemini_api_key', geminiApiKey);
     localStorage.setItem('cve_groq_api_key', groqApiKey);
     setShowSettings(false);
     fetchRuns();
@@ -152,6 +166,8 @@ export default function Home() {
         body: JSON.stringify({
           topic: aiTopic,
           language: aiLanguage,
+          provider: aiProvider,
+          geminiApiKey: geminiApiKey,
           groqApiKey: groqApiKey
         })
       });
@@ -162,7 +178,11 @@ export default function Home() {
       } else {
         if (data.title) setTitle(data.title);
         if (data.look) setLook(data.look);
-        if (data.voice) setVoice(data.voice);
+        if (data.voice) {
+          setVoice(data.voice);
+          const found = VOICES.find(v => v.id === data.voice);
+          if (found) setTtsProvider(found.provider as any);
+        }
         if (Array.isArray(data.beats) && data.beats.length > 0) {
           setBeats(
             data.beats.map((b: any, i: number) => ({
@@ -239,6 +259,7 @@ export default function Home() {
           title,
           script_payload: scriptPayload,
           look,
+          tts_provider: ttsProvider,
           voice,
           aspect_ratio: aspectRatio,
           resolution,
@@ -323,7 +344,19 @@ export default function Home() {
             </div>
             <div className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">Groq API Key (AI Script Director)</label>
+                <label className="block text-slate-300 mb-1 font-medium">Google Gemini API Key (High Quality Voice & Scripting)</label>
+                <input
+                  type="password"
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 font-mono"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">Get free from Google AI Studio. Powers Gemini 3.8 Flash TTS & AI scriptwriting.</p>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Groq API Key (Fast LLaMA 3.3 Scriptwriting)</label>
                 <input
                   type="password"
                   value={groqApiKey}
@@ -331,7 +364,7 @@ export default function Home() {
                   placeholder="gsk_..."
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 font-mono"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">Pre-filled with your Groq API key from story-flow.</p>
+                <p className="text-[11px] text-slate-500 mt-1">Alternative fast AI scriptwriter.</p>
               </div>
 
               <div>
@@ -432,15 +465,32 @@ export default function Home() {
               </div>
 
               <div className="flex-1">
-                <label className="text-[11px] text-slate-400 block mb-1">TTS Voice Model</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] text-slate-400">Voice Engine & Model</label>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${ttsProvider === 'gemini' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-800 text-slate-400'}`}>
+                    {ttsProvider === 'gemini' ? 'Gemini 3.8' : 'Edge-TTS'}
+                  </span>
+                </div>
                 <select
                   value={voice}
-                  onChange={(e) => setVoice(e.target.value)}
+                  onChange={(e) => {
+                    const selected = e.target.value;
+                    setVoice(selected);
+                    const found = VOICES.find(v => v.id === selected);
+                    if (found) setTtsProvider(found.provider as any);
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
-                  {VOICES.map((v) => (
-                    <option key={v.id} value={v.id}>{v.label}</option>
-                  ))}
+                  <optgroup label="✨ Gemini Studio AI Voices (Mature Documentary)">
+                    {VOICES.filter(v => v.provider === 'gemini').map((v) => (
+                      <option key={v.id} value={v.id}>{v.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🎙️ Classic Neural Voices (Urdu / English)">
+                    {VOICES.filter(v => v.provider === 'edge').map((v) => (
+                      <option key={v.id} value={v.id}>{v.label}</option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
             </div>
@@ -522,23 +572,42 @@ export default function Home() {
         <div className="lg:col-span-5 space-y-6">
           {/* AI Story Generator Bar */}
           <div className="bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-slate-900/80 border border-indigo-500/40 rounded-2xl p-5 space-y-3.5 shadow-2xl relative overflow-hidden">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-2">
-                <Wand2 className="w-4 h-4 text-indigo-400 animate-pulse" /> AI Documentary Director (Powered by Groq)
+                <Wand2 className="w-4 h-4 text-indigo-400 animate-pulse" /> AI Documentary Director
               </h2>
-              <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-lg p-0.5 text-[11px]">
-                <button
-                  onClick={() => setAiLanguage('urdu')}
-                  className={`px-2 py-0.5 rounded font-medium transition ${aiLanguage === 'urdu' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                >
-                  اردو (Urdu)
-                </button>
-                <button
-                  onClick={() => setAiLanguage('english')}
-                  className={`px-2 py-0.5 rounded font-medium transition ${aiLanguage === 'english' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                >
-                  English
-                </button>
+              <div className="flex items-center gap-2">
+                {/* AI Provider selector */}
+                <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-lg p-0.5 text-[11px]">
+                  <button
+                    onClick={() => setAiProvider('gemini')}
+                    className={`px-2 py-0.5 rounded font-medium transition ${aiProvider === 'gemini' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    ✨ Gemini 3.8
+                  </button>
+                  <button
+                    onClick={() => setAiProvider('groq')}
+                    className={`px-2 py-0.5 rounded font-medium transition ${aiProvider === 'groq' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    ⚡ Groq
+                  </button>
+                </div>
+
+                {/* Language selector */}
+                <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-lg p-0.5 text-[11px]">
+                  <button
+                    onClick={() => setAiLanguage('urdu')}
+                    className={`px-2 py-0.5 rounded font-medium transition ${aiLanguage === 'urdu' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    اردو (Urdu)
+                  </button>
+                  <button
+                    onClick={() => setAiLanguage('english')}
+                    className={`px-2 py-0.5 rounded font-medium transition ${aiLanguage === 'english' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    English
+                  </button>
+                </div>
               </div>
             </div>
 
