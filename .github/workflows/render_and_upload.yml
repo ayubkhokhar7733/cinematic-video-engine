@@ -81,10 +81,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up System FFmpeg
+      - name: Set up System FFmpeg & Graphics Libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg libavcodec-extra fonts-noto-core
+          sudo apt-get install -y ffmpeg libavcodec-extra fonts-noto-core libegl1 libgl1 libglib2.0-0
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
