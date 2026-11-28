@@ -2,8 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Cinematic Studio — Cloud Video Generator',
-  description: 'Automated code-driven documentary & video engine powered by GitHub Actions',
+  title: 'Cinematic Studio — Cloud Video Suite',
+  description: 'Next-Gen Autonomous Documentary & Video Production Suite',
 };
 
 export default function RootLayout({

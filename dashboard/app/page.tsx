@@ -298,13 +298,13 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <h1 className="font-bold text-lg tracking-tight">Cinematic Studio Cloud</h1>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                <CloudLightning className="w-3 h-3" /> GitHub Compute
+                <CloudLightning className="w-3 h-3" /> Cloud Cluster Active
               </span>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 flex items-center gap-1">
-                <Wand2 className="w-3 h-3" /> Groq AI Scripting
+                <Wand2 className="w-3 h-3" /> AI Director Pro
               </span>
             </div>
-            <p className="text-xs text-slate-400">Automated Code-to-Video Engine & YouTube Uploader</p>
+            <p className="text-xs text-slate-400">Next-Gen Autonomous Documentary & Video Production Suite</p>
           </div>
         </div>
 
@@ -591,7 +591,7 @@ export default function Home() {
                     onClick={() => setAiProvider('groq')}
                     className={`px-2 py-0.5 rounded font-medium transition ${aiProvider === 'groq' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                   >
-                    ⚡ Groq
+                    ⚡ LLaMA 3.3
                   </button>
                 </div>
 
@@ -750,12 +750,12 @@ export default function Home() {
                 {isDispatching ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Dispatching to GitHub Cloud...</span>
+                    <span>Rendering & Producing Video...</span>
                   </>
                 ) : (
                   <>
                     <CloudLightning className="w-4 h-4" />
-                    <span>Render Video on GitHub Cloud</span>
+                    <span>Render & Publish Video</span>
                   </>
                 )}
               </button>
@@ -779,7 +779,7 @@ export default function Home() {
           <div className="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-amber-400" /> Cloud Execution History
+                <Clock className="w-3.5 h-3.5 text-amber-400" /> Cloud Production History
               </h2>
               <button
                 onClick={fetchRuns}
@@ -796,7 +796,7 @@ export default function Home() {
                   <AlertCircle className="w-4 h-4" /> Token Required
                 </div>
                 <p className="text-[11px] leading-relaxed text-amber-200/80">
-                  Click <strong>Settings</strong> to set your GitHub Token. This allows the dashboard to dispatch workflow renders and display live progress.
+                  Click <strong>Settings</strong> to configure your cluster credentials. This allows the studio to dispatch renders and display live production status.
                 </p>
                 <button
                   onClick={() => setShowSettings(true)}
@@ -832,14 +832,7 @@ export default function Home() {
 
                     <div className="text-[10px] text-slate-500 flex items-center justify-between pt-1">
                       <span>{new Date(run.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      <a
-                        href={run.html_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-                      >
-                        Logs <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
+                      <span className="text-slate-400 font-mono">Job #{run.id.toString().slice(-4)}</span>
                     </div>
                   </div>
                 ))}
@@ -847,13 +840,13 @@ export default function Home() {
             )}
           </div>
 
-          {/* Quick Help Card */}
+          {/* Quick Production Info Card */}
           <div className="p-4 rounded-2xl bg-indigo-950/20 border border-indigo-500/20 text-xs space-y-2">
             <div className="font-semibold text-indigo-300 flex items-center gap-1.5">
-              <CloudLightning className="w-3.5 h-3.5 text-indigo-400" /> Free Cloud Compute
+              <CloudLightning className="w-3.5 h-3.5 text-indigo-400" /> High-Performance Cloud Rendering
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Every video renders inside GitHub Cloud runners using Skia + FFmpeg and uploads straight to YouTube via your API token, saving all local resources and GitHub storage.
+              Autonomous production cluster compiles cinema-grade motion graphics, voice acting, and sound staging at 60 FPS directly to YouTube.
             </p>
           </div>
         </div>
