@@ -95,7 +95,7 @@ export default function Home() {
   // AI Story Generation State
   const [aiTopic, setAiTopic] = useState('');
   const [aiLanguage, setAiLanguage] = useState<'urdu' | 'english'>('urdu');
-  const [aiDuration, setAiDuration] = useState<'short' | 'medium' | 'long' | 'deep'>('short');
+  const [aiDuration, setAiDuration] = useState<'short' | 'medium' | 'long' | 'deep' | 'feature'>('short');
   const [aiProvider, setAiProvider] = useState<'gemini' | 'groq'>('gemini');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -621,6 +621,7 @@ export default function Home() {
                   <option value="medium">🎬 Medium (~2 min)</option>
                   <option value="long">📽️ Long (~5 min)</option>
                   <option value="deep">🎞️ Deep Dive (~8-10 min)</option>
+                  <option value="feature">🎥 Feature (~15-20 min)</option>
                 </select>
               </div>
             </div>

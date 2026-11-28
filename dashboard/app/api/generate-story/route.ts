@@ -15,6 +15,7 @@ export async function POST(req: Request) {
       medium: '10 to 12 beats (~2 minutes total)',
       long: '20 to 25 beats (~5 minutes total)',
       deep: '32 to 40 beats (~8-10 minutes total)',
+      feature: '60 to 75 beats (~15-20 minutes full documentary)',
     };
     const targetBeats = beatGuide[duration] || beatGuide.short;
 
